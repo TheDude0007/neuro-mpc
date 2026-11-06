@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Theme.h"
+
 #include <juce_audio_processors/juce_audio_processors.h>
 
 // Gesture-to-Arpeggio: dragging sets host parameters (so gestures can be automated and recorded).
@@ -18,7 +20,8 @@ public:
     void paint (juce::Graphics& g) override
     {
         auto r = getLocalBounds().toFloat().reduced (1.0f);
-        g.setColour (juce::Colour (0xff1c1f26));
+        const auto& theme = neuro::ui::themeOf (*this);
+        g.setColour (theme.screen);
         g.fillRoundedRectangle (r, 6.0f);
         g.setColour (juce::Colours::white.withAlpha (0.1f));
 
@@ -28,9 +31,9 @@ public:
         const auto x = r.getX() + r.getWidth() * (density.getValue() - 0.25f) / 0.75f;
         const auto y = r.getBottom() - r.getHeight() * (octaves.convertFrom0to1 (octaves.getValue()) - 0.5f) / 4.0f;
         const auto glow = 4.0f + 10.0f * variation.getValue();
-        g.setColour (juce::Colour (0xffff8a3d).withAlpha (0.35f));
+        g.setColour (theme.wave.withAlpha (0.35f));
         g.fillEllipse (x - glow, y - glow, glow * 2.0f, glow * 2.0f);
-        g.setColour (juce::Colour (0xffff8a3d));
+        g.setColour (theme.wave);
         g.fillEllipse (x - 4.0f, y - 4.0f, 8.0f, 8.0f);
         g.setColour (juce::Colours::white.withAlpha (0.5f));
         g.setFont (10.0f);

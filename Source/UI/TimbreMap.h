@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../PluginProcessor.h"
+#include "Theme.h"
 
 // 2D timbre map of the current slices: x = dark .. bright, y = tonal .. noisy, colour = drum class.
 // Click a dot to select (and audition) that slice.
@@ -17,7 +18,7 @@ public:
     void paint (juce::Graphics& g) override
     {
         auto r = getLocalBounds().toFloat();
-        g.setColour (juce::Colour (0xff15171c));
+        g.setColour (neuro::ui::themeOf (*this).screen);
         g.fillRoundedRectangle (r, 6.0f);
         g.setColour (juce::Colours::white.withAlpha (0.35f));
         g.setFont (10.0f);

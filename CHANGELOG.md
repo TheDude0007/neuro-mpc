@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0 (2026-11-06): Skins
+- **Three looks that follow what you're doing** (Skin box: auto, or pick one):
+  - **NEON 2K5** (sampling: SLICE, CHOP, KIT): neon yellow underlit controls, chasing disco-purple edge lights.
+  - **3842** (sequencing: SEQ, ARP, GEN, EVOLVE): magenta and ice-white hairlines, machined lattice, corner brackets.
+  - **GOLD** (PAD): brushed gold body, metal knobs, a glint travelling around the frame.
+- Underlit pads and buttons, glowing knob arcs, a flash on every skin change. The choice is saved with the project.
+
 ## 1.2.0 (2026-11-01): CHOP screen and Note Repeat
 - **Note Repeat:** **REPEAT** (hold) and **Lock** next to the bank buttons.
   - **Rates:** 1 bar … **1/128** with triplets.

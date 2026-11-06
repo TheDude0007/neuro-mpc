@@ -176,6 +176,7 @@ public:
     // (-8 .. +7 semitones, pad 9 = original).
     void sixteenLevels (int sliceIndex, int mode, int bank);
     // Folder of the last stems written (Separate drums / Extract drums), else the Separated folder; shown in Finder.
+    int uiSkin = 0; // message thread. 0 auto (follows the mode), 1 NEON 2K5, 2 3842, 3 GOLD; saved with the project
     juce::File getStemsFolder() const { return lastStemsFolder.isDirectory() ? lastStemsFolder : juce::File::getSpecialLocation (juce::File::userMusicDirectory).getChildFile ("NEURO MPC/Separated"); }
     int teachDrum (int component, int sliceIndex);
     int teachDrumRange (int component, int64_t start, int64_t end);

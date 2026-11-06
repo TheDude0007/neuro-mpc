@@ -4,7 +4,7 @@
 namespace
 {
     constexpr int numPads = 16;
-    const juce::Colour background { 0xff0e1014 }, panel { 0xff1c1f26 }, accent { 0xffff8a3d };
+    const juce::Colour panel { 0xff1c1f26 }, accent { 0xffff8a3d };
 
     juce::String describePitch (const neuro::PitchEstimate& p)
     {
@@ -60,20 +60,39 @@ void NeuroMPCEditor::Pad::paint (juce::Graphics& g)
     const auto assigned = processor.getSample() != nullptr && (keys || sliceIndex >= 0);
     auto r = getLocalBounds().toFloat().reduced (3.0f);
 
-    g.setColour (lit ? accent : (assigned ? juce::Colour (def.colour).brighter (0.25f) : panel));
-    g.fillRoundedRectangle (r, 6.0f);
+    const auto& theme = neuro::ui::themeOf (*this);
+    const auto drumTint = juce::Colour (def.colour);
+    const auto hasKitColour = assigned && def.colour != neuro::PadDefinition {}.colour;
+
+    // Underlit pad: light from below in its own colour; a hit floods it and spills around the edge.
+    if (lit)
+    {
+        neuro::ui::NeuroLookAndFeel::glowAround (g, r, theme.radius, theme.accent, 1.0f);
+        g.setColour (theme.accent);
+        g.fillRoundedRectangle (r, theme.radius);
+    }
+    else if (hasKitColour)
+    {
+        g.setGradientFill (juce::ColourGradient::vertical (drumTint.darker (0.35f), r.getY(), drumTint.brighter (0.25f), r.getBottom()));
+        g.fillRoundedRectangle (r, theme.radius);
+    }
+    else
+    {
+        neuro::ui::NeuroLookAndFeel::fillFace (g, r, theme, assigned ? 0.5f : 0.12f);
+        neuro::ui::NeuroLookAndFeel::glowAround (g, r, theme.radius, theme.metal ? theme.onText : theme.accent, assigned ? 0.55f : 0.2f, 2);
+    }
 
     if (p == editor.selectedPad)
     {
-        g.setColour (accent);
-        g.drawRoundedRectangle (r, 6.0f, 2.0f);
+        g.setColour (theme.hairline ? theme.glow : theme.metal ? theme.onText : theme.glow);
+        g.drawRoundedRectangle (r, theme.radius, 2.0f);
     }
 
     const auto label = keys ? juce::String ("KEY")
                      : ! def.name.empty() ? juce::String (def.name)
                      : sliceIndex >= 0 ? "S" + juce::String (sliceIndex + 1) : juce::String ("empty");
 
-    g.setColour (lit ? juce::Colours::black : juce::Colours::white.withAlpha (assigned ? 0.85f : 0.3f));
+    g.setColour (lit ? theme.onText : hasKitColour ? juce::Colours::white : theme.text.withAlpha (assigned ? 0.9f : 0.4f));
     g.setFont (11.0f);
     g.drawFittedText (juce::String::charToString ((juce::juce_wchar) ('A' + p / neuro::padsPerBank)) + juce::String (p % neuro::padsPerBank + 1)
                           + "\n" + label + "\n" + juce::MidiMessage::getMidiNoteName (processor.padNote (p), true, true, 3),
@@ -1153,11 +1172,20 @@ NeuroMPCEditor::NeuroMPCEditor (NeuroMPCProcessor& p) : AudioProcessorEditor (p)
     setResizable (true, true);
     setResizeLimits (1040, 780, 2400, 1600);
     setSize (1140, 840);
+    skinBox.addItemList ({ "Skin: auto", "NEON 2K5", "3842", "GOLD" }, 1);
+    skinBox.setSelectedId (proc.uiSkin + 1, juce::dontSendNotification);
+    skinBox.setTooltip ("Auto: the look follows the mode (sampling = NEON 2K5, sequencing = 3842, pads = GOLD). Or pick one to keep");
+    skinBox.onChange = [this] { proc.uiSkin = skinBox.getSelectedId() - 1; applySkin (true); };
+    addAndMakeVisible (skinBox);
+    setLookAndFeel (&skinLook);
+    applySkin (false);
+
     startTimerHz (30);
 }
 
 NeuroMPCEditor::~NeuroMPCEditor()
 {
+    setLookAndFeel (nullptr);
     stopTimer();
     proc.stopMidiLearn();
     proc.stopPadLayoutLearn();
@@ -1230,7 +1258,7 @@ void NeuroMPCEditor::registerMappables()
              { &mutSeed, "evolve.seed" }, { &kitTab, "view.kit" }, { &sliceClass, "kit.sliceClass" }, { &laneClass, "kit.laneClass" },
              { &hitSensitivity, "kit.hitSensitivity" }, { &deconstructButton, "kit.deconstruct" }, { &separateButton, "kit.separate" }, { &retargetButton, "kit.retarget" },
              { &stepToSlice, "kit.stepToSlice" }, { &stepToTimbre, "kit.stepToTimbre" }, { &stepToPad, "kit.stepToPad" },
-             { &extractAiButton, "kit.extractAi" }, { &teachKick, "kit.teachKick" }, { &teachSnare, "kit.teachSnare" }, { &teachHat, "kit.teachHat" }, { &teachClear, "kit.teachClear" }, { &showStems, "kit.showStems" }, { &kitToPads, "kit.toPads" }, { &repeatLock, "repeat.lock" },
+             { &extractAiButton, "kit.extractAi" }, { &teachKick, "kit.teachKick" }, { &teachSnare, "kit.teachSnare" }, { &teachHat, "kit.teachHat" }, { &teachClear, "kit.teachClear" }, { &showStems, "kit.showStems" }, { &kitToPads, "kit.toPads" }, { &repeatLock, "repeat.lock" }, { &skinBox, "view.skin" },
              { &chopTab, "view.chop" }, { &chopMode, "chop.mode" }, { &chopGrid, "chop.grid" }, { &chopSensitivity, "chop.sensitivity" },
              { &chopButton, "chop.go" }, { &chopSnap, "chop.snap" }, { &slicesToPads, "chop.slicesToPads" }, { &chopKitToPads, "chop.kitToPads" },
              { &levelsMode, "chop.levels" } })
@@ -1798,7 +1826,8 @@ void NeuroMPCEditor::updateGenPanel()
         auto& b = stepButtons[(size_t) i];
         b.setVisible (activePanel == Panel::gen && i < p.length);
         b.setButtonText (! st.on ? juce::String ("-") : (st.accent ? "X" : "x") + (st.ratchet > 1 ? juce::String (st.ratchet) : juce::String()));
-        b.setColour (juce::TextButton::buttonColourId, ! st.on ? panel : st.accent ? accent : accent.withAlpha (0.45f));
+        const auto& theme = neuro::ui::themeOf (*this);
+        b.setColour (juce::TextButton::buttonColourId, ! st.on ? theme.screenCell : st.accent ? theme.wave : theme.wave.withAlpha (0.45f));
     }
 
     if (! patternLength.isMouseButtonDown())
@@ -1816,6 +1845,7 @@ void NeuroMPCEditor::updateGenPanel()
 void NeuroMPCEditor::showPanel (Panel p)
 {
     activePanel = p;
+    applySkin (false);
 
     for (auto* c : slicePanelComponents()) c->setVisible (p == Panel::slice);
     for (auto* c : padPanelComponents())   c->setVisible (p == Panel::pad);
@@ -2031,6 +2061,19 @@ void NeuroMPCEditor::setRepeat (bool on)
 
 void NeuroMPCEditor::timerCallback()
 {
+    // Edge lights: 15 fps, repainting only the margin, which no control overlaps.
+    if (++edgeTick % 2 == 0)
+    {
+        const auto& theme = skinLook.theme();
+        edgePhase = std::fmod (edgePhase + (theme.disco ? 0.03f : 0.008f), 1.0f);
+        edgeFlash *= 0.8f;
+        const auto b = getLocalBounds();
+        repaint (b.withHeight (10));
+        repaint (b.withTop (b.getBottom() - 10));
+        repaint (b.withWidth (10));
+        repaint (b.withLeft (b.getRight() - 10));
+    }
+
     repeatHold.setToggleState (proc.apvts.getRawParameterValue (ParamIDs::noteRepeat)->load() > 0.5f, juce::dontSendNotification);
 
     updateAiStatus();
@@ -2090,10 +2133,104 @@ void NeuroMPCEditor::timerCallback()
 
 void NeuroMPCEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (background);
-    g.setColour (accent);
+    const auto& t = skinLook.theme();
+    g.setGradientFill (juce::ColourGradient::vertical (t.bgTop, 0.0f, t.bgBottom, (float) getHeight()));
+    g.fillAll();
+
+    if (t.hairline) // 3842: machined hairline lattice
+    {
+        g.setColour (t.glow.withAlpha (0.035f));
+        for (int x = 0; x < getWidth(); x += 24) g.drawVerticalLine (x, 0.0f, (float) getHeight());
+        for (int y = 0; y < getHeight(); y += 24) g.drawHorizontalLine (y, 0.0f, (float) getWidth());
+    }
+
+    if (t.metal) // GOLD: brushed grain
+    {
+        juce::Random grain (7);
+        g.setColour (juce::Colours::white.withAlpha (0.05f));
+        for (int y = 0; y < getHeight(); y += 2) g.drawHorizontalLine (y, 0.0f, (float) getWidth() * (0.6f + 0.4f * grain.nextFloat()));
+    }
+
+    paintEdgeLights (g);
+
+    if (! t.metal)
+    {
+        g.setColour (t.glow.withAlpha (0.35f));
+        g.setFont (juce::FontOptions (18.0f, juce::Font::bold));
+        g.drawText ("NEURO MPC", titleArea.translated (0, 1), juce::Justification::centredRight);
+    }
+
+    g.setColour (t.metal ? t.onText : t.accent);
     g.setFont (juce::FontOptions (18.0f, juce::Font::bold));
     g.drawText ("NEURO MPC", titleArea, juce::Justification::centredRight);
+}
+
+// Light lining the board and spilling inwards, in the 10 px margin around everything. NEON: chasing disco lights.
+// 3842: slow breath, a hairline with bright corner brackets. GOLD: a glint travelling around the frame.
+void NeuroMPCEditor::paintEdgeLights (juce::Graphics& g)
+{
+    const auto& t = skinLook.theme();
+    const auto w = (float) getWidth(), h = (float) getHeight();
+    const auto perimeter = 2.0f * (w + h);
+    const auto boost = 1.0f + edgeFlash * 1.5f;
+    constexpr int depth = 9;
+
+    for (int d = 0; d < depth; ++d)
+    {
+        const auto inset = (float) d;
+        const auto fade = std::pow (1.0f - (float) d / (float) depth, 2.0f);
+        const auto x0 = inset, y0 = inset, x1 = w - inset - 1.0f, y1 = h - inset - 1.0f;
+
+        auto colourAt = [&] (float along)
+        {
+            const auto wave = 0.5f + 0.5f * std::sin (juce::MathConstants<float>::twoPi * (along / perimeter * (t.disco ? 14.0f : 1.0f) - edgePhase));
+            if (t.disco)    return t.glow.interpolatedWith (t.glow2, wave * wave).withAlpha (juce::jlimit (0.0f, 1.0f, fade * 0.9f * boost));
+            if (t.metal)    return t.onText.interpolatedWith (t.glow2, std::pow (wave, 12.0f)).withAlpha (juce::jlimit (0.0f, 1.0f, fade * (0.3f + 0.7f * std::pow (wave, 12.0f)) * boost));
+            const auto breath = 0.6f + 0.4f * std::sin (juce::MathConstants<float>::twoPi * edgePhase);
+            return t.glow2.interpolatedWith (t.glow, wave).withAlpha (juce::jlimit (0.0f, 1.0f, fade * 0.8f * breath * boost));
+        };
+
+        constexpr float step = 24.0f;
+        for (float a = 0.0f; a < w; a += step)        { g.setColour (colourAt (a));              g.drawLine (x0 + juce::jmin (a, x1 - x0), y0, x0 + juce::jmin (a + step, x1 - x0), y0, 1.0f); }
+        for (float a = 0.0f; a < h; a += step)        { g.setColour (colourAt (w + a));          g.drawLine (x1, y0 + juce::jmin (a, y1 - y0), x1, y0 + juce::jmin (a + step, y1 - y0), 1.0f); }
+        for (float a = 0.0f; a < w; a += step)        { g.setColour (colourAt (w + h + a));      g.drawLine (x1 - juce::jmin (a, x1 - x0), y1, x1 - juce::jmin (a + step, x1 - x0), y1, 1.0f); }
+        for (float a = 0.0f; a < h; a += step)        { g.setColour (colourAt (w + h + w + a));  g.drawLine (x0, y1 - juce::jmin (a, y1 - y0), x0, y1 - juce::jmin (a + step, y1 - y0), 1.0f); }
+    }
+
+    if (t.hairline) // corner brackets
+    {
+        g.setColour (t.glow);
+        constexpr float n = 26.0f, m = 2.0f;
+        for (auto [cx, cy, sx, sy] : std::initializer_list<std::array<float, 4>> { { m, m, 1.f, 1.f }, { w - m, m, -1.f, 1.f }, { m, h - m, 1.f, -1.f }, { w - m, h - m, -1.f, -1.f } })
+        {
+            g.drawLine (cx, cy, cx + sx * n, cy, 1.5f);
+            g.drawLine (cx, cy, cx, cy + sy * n, 1.5f);
+        }
+    }
+}
+
+// Picks the skin: fixed by the Skin box, or by mode (sampling = NEON 2K5, sequencing = 3842, pads = GOLD).
+void NeuroMPCEditor::applySkin (bool flash)
+{
+    const auto index = proc.uiSkin > 0 ? proc.uiSkin - 1
+                     : activePanel == Panel::pad ? 2
+                     : activePanel == Panel::seq || activePanel == Panel::arp || activePanel == Panel::gen || activePanel == Panel::evolve ? 1 : 0;
+
+    if (index == skinLook.getThemeIndex() && ! flash)
+        return;
+
+    const auto changed = index != skinLook.getThemeIndex();
+    skinLook.setTheme (index);
+    const auto& t = skinLook.theme();
+    info.setColour (juce::Label::textColourId, t.text);
+    for (auto* label : { &genomeInfo, &rulesList })
+    {
+        label->setColour (juce::Label::backgroundColourId, t.screen);
+        label->setColour (juce::Label::textColourId, t.screenText);
+    }
+    if (changed || flash) edgeFlash = 1.0f;
+    sendLookAndFeelChange();
+    repaint();
 }
 
 void NeuroMPCEditor::resized()
@@ -2185,6 +2322,8 @@ void NeuroMPCEditor::resized()
     evolveTab.setBounds (tabs.removeFromLeft (76));
     kitTab.setBounds (tabs.removeFromLeft (60));
     chopTab.setBounds (tabs.removeFromLeft (64));
+    skinBox.setBounds (tabs.removeFromRight (104));
+    tabs.removeFromRight (6);
     titleArea = tabs;
     bottom.removeFromTop (6);
     const auto panelArea = bottom.removeFromTop (142);
@@ -2313,19 +2452,19 @@ void NeuroMPCEditor::resized()
         auto r1 = qp.removeFromTop (22);
 
         for (auto& b : stepPageButtons)
-            b.setBounds (r1.removeFromLeft (60).reduced (1, 0));
+            b.setBounds (r1.removeFromLeft (50).reduced (1, 0));
 
         r1.removeFromLeft (8);
-        lanePageButton.setBounds (r1.removeFromLeft (90));
+        lanePageButton.setBounds (r1.removeFromLeft (76));
         r1.removeFromLeft (8);
         seqFill.setBounds (r1.removeFromLeft (56));
         seqUndo.setBounds (r1.removeFromLeft (52));
         r1.removeFromLeft (4);
         seqRedo.setBounds (r1.removeFromLeft (52));
         r1.removeFromLeft (8);
-        clockIn.setBounds (r1.removeFromLeft (76));
-        clockOut.setBounds (r1.removeFromLeft (84));
-        linkPort.setBounds (r1.removeFromLeft (84));
+        clockIn.setBounds (r1.removeFromLeft (68));
+        clockOut.setBounds (r1.removeFromLeft (76));
+        linkPort.setBounds (r1.removeFromLeft (74));
         r1.removeFromLeft (8);
         seqInfo.setBounds (r1);
 

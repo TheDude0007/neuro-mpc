@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Theme.h"
+
 #include "../PluginProcessor.h"
 
 // Step grid: 8 lanes x 16 steps per page. Click toggles a step (drag paints), right/ctrl-click selects without
@@ -19,7 +21,8 @@ public:
     {
         const auto& pattern = proc.getSeqPattern (proc.getSelectedSeqPattern());
         const auto playStep = proc.getSeqPlayStep();
-        const auto accent = juce::Colour (0xffff8a3d);
+        const auto& theme = neuro::ui::themeOf (*this);
+        const auto accent = theme.wave;
         const auto rowH = (float) getHeight() / rows;
         const auto cellW = (float) (getWidth() - header) / columns;
         g.setFont (11.0f);
@@ -31,9 +34,9 @@ public:
             const auto active = laneIndex < pattern.numLanes;
             const auto y = (float) r * rowH;
 
-            g.setColour (laneIndex == selectedLane ? accent.withAlpha (0.25f) : juce::Colour (0xff1c1f26));
+            g.setColour (laneIndex == selectedLane ? accent.withAlpha (0.25f) : theme.screenCell);
             g.fillRect (0.0f, y + 1.0f, (float) header - 4.0f, rowH - 2.0f);
-            g.setColour (juce::Colours::white.withAlpha (active ? 0.85f : 0.35f));
+            g.setColour (theme.screenText.withAlpha (active ? 0.9f : 0.4f));
             const auto label = lane.name.empty() ? juce::MidiMessage::getMidiNoteName (lane.note, true, true, 3) : juce::String (lane.name);
             g.drawText (juce::String (laneIndex + 1) + " " + label, 4, (int) y, header - 26, (int) rowH, juce::Justification::centredLeft);
             g.setColour (lane.mute ? juce::Colours::red.withAlpha (0.8f) : juce::Colours::white.withAlpha (0.25f));
@@ -54,7 +57,7 @@ public:
                 const auto& st = lane.steps[(size_t) stepIndex];
                 const auto beatGroup = (stepIndex / 4) % 2 == 0;
                 g.setColour (st.on ? accent.withAlpha ((lane.mute ? 0.15f : 0.3f) + 0.65f * st.velocity)
-                                   : juce::Colour (beatGroup ? 0xff262a33 : 0xff20232b));
+                                   : (beatGroup ? theme.screenCell.brighter (0.15f) : theme.screenCell));
                 g.fillRoundedRectangle (cell, 3.0f);
 
                 if (st.on)

@@ -1,10 +1,10 @@
 #include "WaveformView.h"
+#include "Theme.h"
 #include "../Core/TransientDetector.h"
 
 namespace
 {
     constexpr float markerHitPx = 6.0f;
-    const juce::Colour accent { 0xffff8a3d };
 }
 
 WaveformView::WaveformView (NeuroMPCProcessor& p) : proc (p)
@@ -148,13 +148,15 @@ int WaveformView::markerNear (float x) const noexcept
 void WaveformView::paint (juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
-    g.fillAll (juce::Colour (0xff15171c));
+    const auto& theme = neuro::ui::themeOf (*this);
+    const auto accent = theme.accent;
+    g.fillAll (theme.screen);
 
     auto sample = proc.getSample();
 
     if (sample == nullptr)
     {
-        g.setColour (juce::Colours::grey);
+        g.setColour (theme.screenText.withAlpha (0.6f));
         auto missing = proc.getMissingSamplePath();
         g.drawFittedText (missing.isEmpty() ? "Drop an audio file here or click Load"
                                             : "Missing sample: " + missing + "\nLoad or drop the file to relink",
@@ -179,7 +181,7 @@ void WaveformView::paint (juce::Graphics& g)
         g.fillRect (x0, 0.0f, x1 - x0, h);
     }
 
-    g.setColour (juce::Colour (0xff7fd4ff));
+    g.setColour (theme.wave);
     thumb.drawChannels (g, bounds.reduced (0, 14), (double) viewStart / sample->sampleRate,
                         (double) viewEnd / sample->sampleRate, 1.0f);
 
@@ -192,7 +194,7 @@ void WaveformView::paint (juce::Graphics& g)
         if (x < -40.0f || x > (float) getWidth())
             continue;
 
-        g.setColour (accent);
+        g.setColour (theme.hairline ? theme.accent : theme.disco ? theme.glow : theme.glow2.withAlpha (0.9f));
 
         if (i > 0)
             g.drawVerticalLine ((int) x, 0.0f, h);
@@ -214,7 +216,7 @@ void WaveformView::paint (juce::Graphics& g)
     {
         const auto at = hoveredMarker > 0 ? slices[(size_t) hoveredMarker].startSample : snapped (xToSample (hoverX));
         const auto x = sampleToX (at);
-        g.setColour (juce::Colours::white.withAlpha (hoveredMarker > 0 ? 0.9f : 0.45f));
+        g.setColour (theme.screenText.withAlpha (hoveredMarker > 0 ? 0.9f : 0.45f));
         g.drawVerticalLine ((int) x, 0.0f, h);
         g.drawText (juce::String ((double) at / sample->sampleRate, 3) + " s", (int) x + 4, getHeight() - 28, 70, 14, juce::Justification::left);
     }

@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "UI/GesturePad.h"
+#include "UI/Theme.h"
 #include "UI/RepeatPad.h"
 #include "UI/SeqGrid.h"
 #include "UI/TimbreMap.h"
@@ -70,6 +71,12 @@ private:
     void selectPad (int padIndex);
     enum class Panel { slice, pad, arp, gen, seq, evolve, kit, chop };
     void showPanel (Panel);
+    void applySkin (bool flash);
+    void paintEdgeLights (juce::Graphics&);
+    neuro::ui::NeuroLookAndFeel skinLook;
+    juce::ComboBox skinBox;
+    float edgePhase = 0.0f, edgeFlash = 0.0f;
+    int edgeTick = 0;
     void updateArpPanel();
     void updateGenPanel();
     void updateSeqPanel();

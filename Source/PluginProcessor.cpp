@@ -2230,6 +2230,7 @@ juce::ValueTree NeuroMPCProcessor::createStateTree() const
     juce::ValueTree root ("NEURO_MPC");
     root.setProperty ("version", stateVersion, nullptr);
     root.setProperty ("keyboardSlice", keyboardSlice, nullptr);
+    root.setProperty ("uiSkin", uiSkin, nullptr);
     root.appendChild (const_cast<juce::AudioProcessorValueTreeState&> (apvts).copyState(), nullptr);
 
     juce::ValueTree sampleTree ("SAMPLE");
@@ -2430,6 +2431,7 @@ bool NeuroMPCProcessor::applyStateTree (juce::ValueTree root)
         apvts.replaceState (params);
 
     keyboardSlice = root.getProperty ("keyboardSlice", 0);
+    uiSkin = juce::jlimit (0, 3, (int) root.getProperty ("uiSkin", 0));
 
     if (auto midiTree = root.getChildWithName ("MIDI_MAP"); midiTree.isValid())
     {
