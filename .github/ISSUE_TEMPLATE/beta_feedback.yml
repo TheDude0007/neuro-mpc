@@ -1,0 +1,30 @@
+name: Beta feedback
+description: A bug, a confusing moment, or what you loved
+labels: ["beta"]
+body:
+  - type: dropdown
+    id: host
+    attributes:
+      label: Where were you running it?
+      options: [Logic Pro, Ableton Live, Standalone app, MPC 3 software, Other]
+    validations:
+      required: true
+  - type: input
+    id: mac
+    attributes:
+      label: Mac and macOS version
+      placeholder: M2 MacBook Air, macOS 15.1
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you tried, what you expected, and what you got. Screenshots or audio help.
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: How bad was it?
+      options: [Crash or lost work, Couldn't do what I wanted, Confusing or clumsy, Just a suggestion, Something I loved]
+    validations:
+      required: true

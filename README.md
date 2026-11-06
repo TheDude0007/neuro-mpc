@@ -3,6 +3,8 @@
 An open-source, MPC-style slice sampler for macOS: VST3 (Ableton Live), AU (Logic Pro), and Standalone.
 C++20 · JUCE 9.0.4 (pinned) · CMake · AGPL-3.0.
 
+> **Beta:** testers wanted. Start with the [15-minute test guide](Documentation/BETA.md), then [send feedback](https://github.com/TheDude0007/neuro-mpc/issues/new?template=beta_feedback.yml).
+
 ## Install (macOS, Apple Silicon)
 1. Download `NEURO-MPC-<version>-macOS-arm64.zip` from [Releases](../../releases) and unzip it.
 2. Copy `NEURO MPC.vst3` to `~/Library/Audio/Plug-Ins/VST3/` and `NEURO MPC.component` to `~/Library/Audio/Plug-Ins/Components/`. The Standalone `NEURO MPC.app` can go anywhere.
@@ -30,8 +32,8 @@ The acceptance status of each requirement, with evidence, is in [Documentation/A
 | MIDI mapping | MIDI Learn for every control (233, enforced by test); parameter mappings work with the editor closed; hardware pads follow pad banks A–D via a learned pad layout; measured Akai MPK mini mk2 template. See [Documentation/MIDI_MAPPING.md](Documentation/MIDI_MAPPING.md) |
 | Kit intelligence | Sound fingerprints + drum classes (kick, snare, hats, toms, crash, ride…) with a timbre map; **Timbre-Addressed Sequencing** (patterns re-orchestrate on any kit); **Loop Deconstructor** (loop → one lane per kit piece, groove kept); **Extract drums (AI)** (Demucs, in-process: full song → drum stem); **Separate drums** (NMF: mixed loop → isolated Kick/Snare/Cymbals stems + lanes; **teach the kit** with example hits); **12 outputs** (one per class) for mixing; **Chord-Lock** (tonal slices follow your chord). See [Documentation/KIT.md](Documentation/KIT.md) |
 | CHOP + Note Repeat | MPC-style **CHOP** tab: chop modes (transients / grid / kit / manual), magnetic snap, crosshair and keys (Del, arrows, Space), Kit → pads, 16 Levels. **Note Repeat** 1 bar … 1/128 with gate (glitch), swing, latch, Repeat XY pad. See [Documentation/CHOP.md](Documentation/CHOP.md) |
-| Rig link | Runs in unison with **GW-1** (synth) and **KAOSS NEXUS** (XY effect): sequencer lanes play GW-1 (**Out: MIDI ch N**), virtual MIDI port **NEURO MPC** (lanes + clock), shared MIDI clock. See [Documentation/GMNI_LINK.md](Documentation/GMNI_LINK.md) |
-| MPC sync | Runs inside MPC 3 software (host sync), and next to MPC hardware over **MIDI clock**: follows Start/Continue/Stop/Song Position/tempo sample-accurately, or sends clock. See [Documentation/MPC.md](Documentation/MPC.md) |
+| Rig link (experimental) | Runs in unison with **GW-1** (synth) and **KAOSS NEXUS** (XY effect): sequencer lanes play GW-1 (**Out: MIDI ch N**), virtual MIDI port **NEURO MPC** (lanes + clock), shared MIDI clock. See [Documentation/GMNI_LINK.md](Documentation/GMNI_LINK.md) |
+| MPC sync (experimental, untested on real MPC gear) | Designed to run inside MPC 3 software (host sync), and next to MPC hardware over **MIDI clock**: follows Start/Continue/Stop/Song Position/tempo sample-accurately, or sends clock. See [Documentation/MPC.md](Documentation/MPC.md) |
 | Real-time safety | No locks, file I/O or allocation on the audio thread. Samples and slices reach the audio thread through `RtShared` (hazard-pointer handoff); UI note input goes through a lock-free FIFO |
 
 **Validation:**
